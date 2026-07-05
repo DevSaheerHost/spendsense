@@ -61,15 +61,20 @@ function DashboardContent() {
             : "No budget set yet."}
         </p>
         <form onSubmit={handleSaveBudget} className="flex gap-2">
-          <input
-            type="number"
-            min="0"
-            step="0.01"
-            value={budgetInput}
-            onChange={(e) => setBudgetInput(e.target.value)}
-            placeholder="Set monthly budget"
-            className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          />
+          <div className="relative flex-1">
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-500">
+              &#8377;
+            </span>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={budgetInput}
+              onChange={(e) => setBudgetInput(e.target.value)}
+              placeholder="Set monthly budget"
+              className="w-full rounded-lg border border-slate-300 py-2 pl-7 pr-3 text-sm"
+            />
+          </div>
           <button type="submit" className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
             Save
           </button>

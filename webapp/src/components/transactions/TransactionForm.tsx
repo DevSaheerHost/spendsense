@@ -69,17 +69,22 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
 
       <div>
         <label className="mb-1 block text-sm font-medium text-slate-700">Amount</label>
-        <input
-          type="number"
-          inputMode="decimal"
-          min="0"
-          step="0.01"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          required
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          placeholder="0.00"
-        />
+        <div className="relative">
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-500">
+            &#8377;
+          </span>
+          <input
+            type="number"
+            inputMode="decimal"
+            min="0"
+            step="0.01"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            required
+            className="w-full rounded-lg border border-slate-300 py-2 pl-7 pr-3 text-sm"
+            placeholder="0.00"
+          />
+        </div>
       </div>
 
       <div>

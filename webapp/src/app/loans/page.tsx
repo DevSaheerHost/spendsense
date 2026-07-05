@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLoans } from "@/hooks/useLoans";
 import { addLoan, deleteLoan, recordEmiPayment } from "@/lib/firestore/loans";
 import type { NewLoan } from "@/lib/types";
+import { formatCurrency } from "@/lib/utils";
 
 function LoansContent() {
   const { user } = useAuth();
@@ -39,7 +40,7 @@ function LoansContent() {
       <div className="rounded-xl border border-slate-200 bg-white p-4">
         <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Total Pending Debt</p>
         <p className="mt-1 text-2xl font-bold text-slate-900">
-          {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(totalPending)}
+          {formatCurrency(totalPending)}
         </p>
       </div>
       <LoanForm onSubmit={handleAdd} />
