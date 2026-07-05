@@ -51,6 +51,17 @@ export interface ChatMessage {
   text: string;
 }
 
+// A trimmed transaction the AI can reason about (esp. the free-text
+// description, which explains exactly how the money was earned or spent).
+export interface AdviceTransaction {
+  type: TransactionType;
+  amount: number;
+  description: string;
+  category: string;
+  flag: FlagType;
+  date: string;
+}
+
 export const EXPENSE_CATEGORIES = [
   "Housing",
   "Utilities",

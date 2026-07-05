@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyIdTokenViaRest } from "@/lib/firebase/verifyToken";
 import type { FinancialSnapshot } from "@/lib/recommendations/engine";
-import {
-  generateGeminiChatReply,
-  type AdviceTransaction,
-  type ChatMessage,
-} from "@/lib/recommendations/gemini";
+import { generateChatReply } from "@/lib/ai";
+import type { AdviceTransaction, ChatMessage } from "@/lib/types";
 
-// Allow enough time for a Gemini call plus one retry-with-backoff on 429.
+// Allow enough time for an AI call plus one retry-with-backoff on 429.
 export const maxDuration = 30;
 
 // Interactive finance chat. Grounded in the caller's own financial data and
@@ -34,7 +31,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "snapshot and messages are required" }, { status: 400 });
   }
 
-  const reply = await generateGeminiChatReply(snapshot, categoryBreakdown, transactions, messages);
+  const reply = await generateChatReply(snapshot, categoryBreakdown, transactions, messages);
   if (!reply) {
     return NextResponse.json(
       { error: "The AI assistant is unavailable right now. Please try again later." },
