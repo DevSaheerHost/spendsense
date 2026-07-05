@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyIdTokenViaRest } from "@/lib/firebase/verifyToken";
 import { generateFallbackRecommendations, type FinancialSnapshot } from "@/lib/recommendations/engine";
-import { generateGeminiAdvice } from "@/lib/recommendations/gemini";
+import { generateGeminiAdvice, type AdviceTransaction } from "@/lib/recommendations/gemini";
 
 export async function POST(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
@@ -21,12 +21,13 @@ export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null);
   const snapshot = body?.snapshot as FinancialSnapshot | undefined;
   const categoryBreakdown = (body?.categoryBreakdown as Record<string, number>) ?? {};
+  const transactions = (body?.transactions as AdviceTransaction[]) ?? [];
 
   if (!snapshot) {
     return NextResponse.json({ error: "Missing snapshot in request body" }, { status: 400 });
   }
 
-  const geminiAdvice = await generateGeminiAdvice(snapshot, categoryBreakdown);
+  const geminiAdvice = await generateGeminiAdvice(snapshot, categoryBreakdown, transactions);
   if (geminiAdvice && geminiAdvice.length > 0) {
     return NextResponse.json({ source: "gemini", recommendations: geminiAdvice });
   }
