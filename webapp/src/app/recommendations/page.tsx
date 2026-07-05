@@ -12,7 +12,7 @@ function RecommendationsContent() {
   const { user } = useAuth();
   const { transactions } = useTransactions(user?.uid);
   const { loans } = useLoans(user?.uid);
-  const { snapshot, categoryBreakdown } = useMonthlyStats(transactions, loans);
+  const { snapshot, categoryBreakdown, monthlyTransactions } = useMonthlyStats(transactions, loans);
 
   return (
     <div className="space-y-4">
@@ -20,7 +20,11 @@ function RecommendationsContent() {
       <p className="text-sm text-slate-500">
         Personalized budget advice based on your income, spending, and loan obligations this month.
       </p>
-      <RecommendationsPanel snapshot={snapshot} categoryBreakdown={categoryBreakdown} />
+      <RecommendationsPanel
+        snapshot={snapshot}
+        categoryBreakdown={categoryBreakdown}
+        transactions={monthlyTransactions}
+      />
     </div>
   );
 }
