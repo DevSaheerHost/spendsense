@@ -14,11 +14,27 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-export const firebaseApp: FirebaseApp =
-  getApps().length > 0 ? getApps()[0] : initializeApp(firebaseConfig);
+function getFirebaseApp(): FirebaseApp {
+  return getApps().length > 0 ? getApps()[0] : initializeApp(firebaseConfig);
+}
 
-export const auth: Auth = getAuth(firebaseApp);
-export const db: Firestore = getFirestore(firebaseApp);
+// Auth and Firestore are initialized lazily on first use rather than at module
+// load. `getAuth()` throws (auth/invalid-api-key) when the config is missing,
+// so eager top-level init would crash static prerendering during the build
+// (e.g. of the not-found page) before env vars are ever needed. These getters
+// are only ever called from browser-side code (effects, event handlers,
+// Firestore subscriptions), so initialization happens with the real config.
+let authInstance: Auth | null = null;
+export function getFirebaseAuth(): Auth {
+  if (!authInstance) authInstance = getAuth(getFirebaseApp());
+  return authInstance;
+}
+
+let dbInstance: Firestore | null = null;
+export function getFirebaseDb(): Firestore {
+  if (!dbInstance) dbInstance = getFirestore(getFirebaseApp());
+  return dbInstance;
+}
 
 // Messaging only works in the browser, and only when the platform supports it
 // (e.g. no Safari private mode, no SSR). Callers must await this helper
@@ -27,5 +43,5 @@ export async function getMessagingInstance(): Promise<Messaging | null> {
   if (typeof window === "undefined") return null;
   const supported = await isSupported().catch(() => false);
   if (!supported) return null;
-  return getMessaging(firebaseApp);
+  return getMessaging(getFirebaseApp());
 }

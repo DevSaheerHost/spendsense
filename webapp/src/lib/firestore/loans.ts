@@ -11,11 +11,11 @@ import {
   Timestamp,
   updateDoc,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
+import { getFirebaseDb } from "@/lib/firebase/client";
 import type { Loan, NewLoan } from "@/lib/types";
 
 function loansCol(uid: string) {
-  return collection(db, "users", uid, "loans");
+  return collection(getFirebaseDb(), "users", uid, "loans");
 }
 
 export function subscribeToLoans(
@@ -56,15 +56,15 @@ export async function addLoan(uid: string, loan: NewLoan) {
 }
 
 export async function updateLoan(uid: string, id: string, updates: Partial<Loan>) {
-  await updateDoc(doc(db, "users", uid, "loans", id), updates);
+  await updateDoc(doc(getFirebaseDb(), "users", uid, "loans", id), updates);
 }
 
 export async function recordEmiPayment(uid: string, id: string, amount: number) {
-  await updateDoc(doc(db, "users", uid, "loans", id), {
+  await updateDoc(doc(getFirebaseDb(), "users", uid, "loans", id), {
     amountPaid: increment(amount),
   });
 }
 
 export async function deleteLoan(uid: string, id: string) {
-  await deleteDoc(doc(db, "users", uid, "loans", id));
+  await deleteDoc(doc(getFirebaseDb(), "users", uid, "loans", id));
 }
