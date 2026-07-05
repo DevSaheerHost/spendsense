@@ -1,10 +1,17 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import toast from "react-hot-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSpeech } from "@/hooks/useSpeech";
+import { useCooldown } from "@/hooks/useCooldown";
 import { SpeakButton } from "@/components/recommendations/SpeakButton";
 import { ChatPanel } from "@/components/recommendations/ChatPanel";
+import {
+  loadCachedRecommendations,
+  saveCachedRecommendations,
+  type CachedRecommendations,
+} from "@/lib/firestore/recommendations";
 import { generateFallbackRecommendations, type FinancialSnapshot } from "@/lib/recommendations/engine";
 import type { Transaction } from "@/lib/types";
 
@@ -14,6 +21,16 @@ interface RecommendationsPanelProps {
   transactions: Transaction[];
 }
 
+function timeAgo(iso: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} min ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} hr ago`;
+  return `${Math.floor(hours / 24)} day(s) ago`;
+}
+
 export function RecommendationsPanel({
   snapshot,
   categoryBreakdown,
@@ -21,11 +38,11 @@ export function RecommendationsPanel({
 }: RecommendationsPanelProps) {
   const { user } = useAuth();
   const speech = useSpeech();
-  const [recommendations, setRecommendations] = useState<string[]>([]);
-  const [source, setSource] = useState<"gemini" | "fallback" | null>(null);
-  const [loading, setLoading] = useState(true);
+  const refreshCooldown = useCooldown(6000);
+  const [cached, setCached] = useState<CachedRecommendations | null>(null);
+  const [loadingCache, setLoadingCache] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  // Trim to just the fields the model needs (esp. the free-text description).
   const adviceTransactions = useMemo(
     () =>
       transactions.map((t) => ({
@@ -39,57 +56,93 @@ export function RecommendationsPanel({
     [transactions]
   );
 
+  // Free, client-side advice shown until the user generates AI advice — no
+  // Gemini call involved.
+  const localFallback = useMemo(
+    () => generateFallbackRecommendations(snapshot).map((r) => r.message),
+    [snapshot]
+  );
+
+  // Load previously generated advice once, so revisiting the page (or data
+  // streaming in) never triggers a Gemini request on its own.
   useEffect(() => {
+    if (!user) return;
     let cancelled = false;
-
-    async function loadRecommendations() {
-      setLoading(true);
-      try {
-        if (!user) throw new Error("Not authenticated");
-        const idToken = await user.getIdToken();
-        const response = await fetch("/api/recommendations", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
-          body: JSON.stringify({ snapshot, categoryBreakdown, transactions: adviceTransactions }),
-        });
-        if (!response.ok) throw new Error("Request failed");
-        const data = await response.json();
-        if (!cancelled) {
-          setRecommendations(data.recommendations ?? []);
-          setSource(data.source ?? "fallback");
-        }
-      } catch {
-        // Network or server failure: fall back to local 50/30/20 logic
-        // computed entirely on the client so advice is never unavailable.
-        if (!cancelled) {
-          setRecommendations(generateFallbackRecommendations(snapshot).map((r) => r.message));
-          setSource("fallback");
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    loadRecommendations();
+    // loadingCache starts true; the promise callbacks below flip it off.
+    loadCachedRecommendations(user.uid)
+      .then((data) => {
+        if (!cancelled) setCached(data);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setLoadingCache(false);
+      });
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, JSON.stringify(snapshot), JSON.stringify(categoryBreakdown), JSON.stringify(adviceTransactions)]);
+  }, [user]);
+
+  async function handleRefresh() {
+    if (!user || refreshing || refreshCooldown.cooling) return;
+    setRefreshing(true);
+    try {
+      const idToken = await user.getIdToken();
+      const response = await fetch("/api/recommendations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+        body: JSON.stringify({ snapshot, categoryBreakdown, transactions: adviceTransactions }),
+      });
+      if (!response.ok) throw new Error("Request failed");
+      const data = await response.json();
+      const next: CachedRecommendations = {
+        recommendations: data.recommendations ?? [],
+        source: data.source === "gemini" ? "gemini" : "fallback",
+        generatedAt: new Date().toISOString(),
+      };
+      setCached(next);
+      saveCachedRecommendations(user.uid, next).catch(() => {});
+      refreshCooldown.start();
+    } catch {
+      toast.error("Couldn't refresh advice. Please try again shortly.");
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
+  const recommendations = cached?.recommendations ?? localFallback;
+  const source = cached?.source ?? "fallback";
+  const refreshDisabled = refreshing || refreshCooldown.cooling;
 
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-slate-200 bg-white p-4">
-        <div className="mb-3 flex items-center justify-between">
+        <div className="mb-1 flex items-center justify-between gap-2">
           <h3 className="text-sm font-semibold text-slate-700">Smart Recommendations</h3>
-          {source && (
-            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
-              {source === "gemini" ? "AI-generated" : "Rule-based (50/30/20)"}
-            </span>
-          )}
+          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
+            {source === "gemini" ? "AI-generated" : "Rule-based (50/30/20)"}
+          </span>
         </div>
-        {loading ? (
-          <p className="text-sm text-slate-500">Generating advice...</p>
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <p className="text-xs text-slate-400">
+            {cached ? `Updated ${timeAgo(cached.generatedAt)}` : "Showing quick rule-based advice"}
+          </p>
+          <button
+            onClick={handleRefresh}
+            disabled={refreshDisabled}
+            className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
+          >
+            {refreshing
+              ? "Generating…"
+              : refreshCooldown.cooling
+                ? "Please wait…"
+                : cached
+                  ? "Refresh advice"
+                  : "Get AI advice"}
+          </button>
+        </div>
+
+        {loadingCache ? (
+          <p className="text-sm text-slate-500">Loading…</p>
         ) : (
           <ul className="space-y-2">
             {recommendations.map((rec, index) => (

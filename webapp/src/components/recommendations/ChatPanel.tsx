@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCooldown } from "@/hooks/useCooldown";
 import { SpeakButton } from "@/components/recommendations/SpeakButton";
 import { clearChatHistory, loadChatHistory, saveChatHistory } from "@/lib/firestore/chat";
 import type { FinancialSnapshot } from "@/lib/recommendations/engine";
@@ -34,6 +35,7 @@ export function ChatPanel({
   onToggleSpeak,
 }: ChatPanelProps) {
   const { user } = useAuth();
+  const cooldown = useCooldown(4000);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
@@ -57,7 +59,7 @@ export function ChatPanel({
   async function sendMessage(e: React.FormEvent) {
     e.preventDefault();
     const question = input.trim();
-    if (!question || sending || !user) return;
+    if (!question || sending || cooldown.cooling || !user) return;
 
     const nextMessages: ChatMessage[] = [...messages, { role: "user", text: question }];
     setMessages(nextMessages);
@@ -84,6 +86,7 @@ export function ChatPanel({
       setError("The AI assistant is unavailable right now. Please try again.");
     } finally {
       setSending(false);
+      cooldown.start();
     }
   }
 
@@ -153,10 +156,10 @@ export function ChatPanel({
         />
         <button
           type="submit"
-          disabled={sending || !input.trim()}
+          disabled={sending || cooldown.cooling || !input.trim()}
           className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
         >
-          Send
+          {cooldown.cooling && !sending ? "Wait…" : "Send"}
         </button>
       </form>
     </div>
