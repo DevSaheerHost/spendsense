@@ -12,6 +12,7 @@ import {
   saveCachedRecommendations,
   type CachedRecommendations,
 } from "@/lib/firestore/recommendations";
+import { recordAiUsage } from "@/lib/firestore/aiUsage";
 import { generateFallbackRecommendations, type FinancialSnapshot } from "@/lib/recommendations/engine";
 import type { Transaction } from "@/lib/types";
 
@@ -85,6 +86,7 @@ export function RecommendationsPanel({
   async function handleRefresh() {
     if (!user || refreshing || refreshCooldown.cooling) return;
     setRefreshing(true);
+    recordAiUsage(user.uid);
     try {
       const idToken = await user.getIdToken();
       const response = await fetch("/api/recommendations", {

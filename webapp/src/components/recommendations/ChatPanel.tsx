@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCooldown } from "@/hooks/useCooldown";
 import { SpeakButton } from "@/components/recommendations/SpeakButton";
+import { recordAiUsage } from "@/lib/firestore/aiUsage";
 import { clearChatHistory, loadChatHistory, saveChatHistory } from "@/lib/firestore/chat";
 import type { FinancialSnapshot } from "@/lib/recommendations/engine";
 import type { ChatMessage } from "@/lib/types";
@@ -66,6 +67,7 @@ export function ChatPanel({
     setInput("");
     setError(null);
     setSending(true);
+    recordAiUsage(user.uid);
 
     try {
       const idToken = await user.getIdToken();

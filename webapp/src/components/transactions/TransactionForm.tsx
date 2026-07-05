@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCooldown } from "@/hooks/useCooldown";
+import { recordAiUsage } from "@/lib/firestore/aiUsage";
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, type FlagType, type NewTransaction, type TransactionType } from "@/lib/types";
 
 interface TransactionFormProps {
@@ -39,6 +40,7 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
     async (desc: string, txType: TransactionType, silent: boolean) => {
       if (!user || !desc.trim()) return;
       setSuggesting(true);
+      recordAiUsage(user.uid);
       try {
         const idToken = await user.getIdToken();
         const response = await fetch("/api/categorize", {

@@ -3,6 +3,7 @@
 import { AppShell } from "@/components/layout/AppShell";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import { RecommendationsPanel } from "@/components/recommendations/RecommendationsPanel";
+import { AiUsageNote } from "@/components/recommendations/AiUsageNote";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useLoans } from "@/hooks/useLoans";
@@ -31,6 +32,7 @@ function RecommendationsContent() {
         categoryBreakdown={categoryBreakdown}
         transactions={monthlyTransactions}
       />
+      <AiUsageNote />
     </div>
   );
 }
