@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import toast from "react-hot-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, type FlagType, type NewTransaction, type TransactionType } from "@/lib/types";
 
 interface TransactionFormProps {
@@ -10,6 +12,7 @@ interface TransactionFormProps {
 const todayIso = () => new Date().toISOString().slice(0, 10);
 
 export function TransactionForm({ onSubmit }: TransactionFormProps) {
+  const { user } = useAuth();
   const [type, setType] = useState<TransactionType>("expense");
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
@@ -17,8 +20,37 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
   const [flag, setFlag] = useState<FlagType>("green");
   const [date, setDate] = useState(todayIso());
   const [submitting, setSubmitting] = useState(false);
+  const [suggesting, setSuggesting] = useState(false);
 
   const categories = type === "expense" ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
+
+  // Ask the AI to pick a category from the description, so the user doesn't
+  // have to categorize manually (and mistakes like "Biryani" under Healthcare
+  // get corrected).
+  async function handleSuggestCategory() {
+    if (!user || !description.trim() || suggesting) return;
+    setSuggesting(true);
+    try {
+      const idToken = await user.getIdToken();
+      const response = await fetch("/api/categorize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+        body: JSON.stringify({ description: description.trim(), type }),
+      });
+      if (!response.ok) throw new Error("failed");
+      const data = await response.json();
+      if (data.category && (categories as readonly string[]).includes(data.category)) {
+        setCategory(data.category);
+        toast.success(`AI set category: ${data.category}`);
+      } else {
+        toast.error("Couldn't suggest a category.");
+      }
+    } catch {
+      toast.error("Couldn't suggest a category.");
+    } finally {
+      setSuggesting(false);
+    }
+  }
 
   function handleTypeChange(nextType: TransactionType) {
     setType(nextType);
@@ -107,7 +139,18 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700">Category</label>
+          <div className="mb-1 flex items-center justify-between">
+            <label className="block text-sm font-medium text-slate-700">Category</label>
+            <button
+              type="button"
+              onClick={handleSuggestCategory}
+              disabled={suggesting || !description.trim()}
+              title="Let AI pick a category from your description"
+              className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 disabled:text-slate-300"
+            >
+              {suggesting ? "Suggesting..." : "✨ AI"}
+            </button>
+          </div>
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}

@@ -1,5 +1,8 @@
 import "server-only";
 import type { FinancialSnapshot } from "@/lib/recommendations/engine";
+import type { ChatMessage } from "@/lib/types";
+
+export type { ChatMessage };
 
 // gemini-2.5-flash is on the free tier and fast; override with GEMINI_MODEL
 // if your key has quota for a different model.
@@ -18,11 +21,6 @@ export interface AdviceTransaction {
   category: string;
   flag: "green" | "yellow" | "red";
   date: string;
-}
-
-export interface ChatMessage {
-  role: "user" | "model";
-  text: string;
 }
 
 // Builds the shared financial-context block that primes the model for both
@@ -144,10 +142,43 @@ digits. Keep replies short (2-4 sentences) and plain text with no markdown.`,
     ],
   };
 
-  const contents = history.slice(-12).map((m) => ({
+  const contents = history.slice(-20).map((m) => ({
     role: m.role,
     parts: [{ text: m.text }],
   }));
 
   return callGemini({ systemInstruction, contents }, 15_000);
+}
+
+/**
+ * Picks the best-fitting category for a transaction from the allowed list,
+ * based on its free-text description. Returns the chosen category (guaranteed
+ * to be one of `categories`) or null if the AI is unavailable or returns an
+ * unrecognized value, so the caller can leave the manual selection untouched.
+ */
+export async function suggestCategory(
+  description: string,
+  type: "income" | "expense",
+  categories: readonly string[]
+): Promise<string | null> {
+  if (!description.trim()) return null;
+
+  const prompt = `You are categorizing a personal finance ${type} transaction.
+Description: "${description}"
+
+Choose the single most appropriate category from this exact list:
+${categories.map((c) => `- ${c}`).join("\n")}
+
+Reply with ONLY the category name, exactly as written in the list, and nothing
+else. No punctuation, no explanation.`;
+
+  const text = await callGemini({ contents: [{ parts: [{ text: prompt }] }] }, 8_000);
+  if (!text) return null;
+
+  const cleaned = text.trim().replace(/^["'\-\s]+|["'.\s]+$/g, "");
+  // Exact match first, then a lenient case-insensitive match.
+  const exact = categories.find((c) => c === cleaned);
+  if (exact) return exact;
+  const lenient = categories.find((c) => c.toLowerCase() === cleaned.toLowerCase());
+  return lenient ?? null;
 }

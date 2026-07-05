@@ -42,6 +42,11 @@ export interface UserProfile {
   fcmTokens?: string[];
 }
 
+export interface ChatMessage {
+  role: "user" | "model";
+  text: string;
+}
+
 export const EXPENSE_CATEGORIES = [
   "Housing",
   "Utilities",
