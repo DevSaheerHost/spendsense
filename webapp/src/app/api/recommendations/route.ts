@@ -3,6 +3,9 @@ import { verifyIdTokenViaRest } from "@/lib/firebase/verifyToken";
 import { generateFallbackRecommendations, type FinancialSnapshot } from "@/lib/recommendations/engine";
 import { generateGeminiAdvice, type AdviceTransaction } from "@/lib/recommendations/gemini";
 
+// Allow enough time for a Gemini call plus one retry-with-backoff on 429.
+export const maxDuration = 30;
+
 export async function POST(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
   const idToken = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;

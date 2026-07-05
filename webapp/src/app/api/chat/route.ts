@@ -7,6 +7,9 @@ import {
   type ChatMessage,
 } from "@/lib/recommendations/gemini";
 
+// Allow enough time for a Gemini call plus one retry-with-backoff on 429.
+export const maxDuration = 30;
+
 // Interactive finance chat. Grounded in the caller's own financial data and
 // protected by the same REST ID-token check as the recommendations route.
 export async function POST(request: NextRequest) {
