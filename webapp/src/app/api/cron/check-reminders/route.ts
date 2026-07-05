@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminDb, getAdminMessaging } from "@/lib/firebase/admin";
+import { formatCurrency } from "@/lib/utils";
 
 // Meant to be invoked by an external scheduler (e.g. Vercel Cron) once a day.
 // Checks every user for:
@@ -44,7 +45,7 @@ export async function GET(request: NextRequest) {
       if (daysUntilDue >= 0 && daysUntilDue <= 3) {
         notifications.push({
           title: "Upcoming EMI payment",
-          body: `${loan.name}: an EMI of $${loan.monthlyEmi} is due in ${daysUntilDue} day(s).`,
+          body: `${loan.name}: an EMI of ${formatCurrency(loan.monthlyEmi)} is due in ${daysUntilDue} day(s).`,
         });
       }
     }
@@ -62,7 +63,7 @@ export async function GET(request: NextRequest) {
       if (totalExpense > monthlyBudget) {
         notifications.push({
           title: "Monthly budget exceeded",
-          body: `You have spent $${totalExpense.toFixed(2)} this month, over your $${monthlyBudget} budget.`,
+          body: `You have spent ${formatCurrency(totalExpense)} this month, over your ${formatCurrency(monthlyBudget)} budget.`,
         });
         overspendSent += 1;
       }

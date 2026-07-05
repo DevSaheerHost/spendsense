@@ -19,7 +19,7 @@ export async function generateGeminiAdvice(
   if (!apiKey) return null;
 
   const prompt = `You are a personal finance advisor. A user has the following
-financial summary for the current month (all amounts in USD):
+financial summary for the current month (all amounts in Indian Rupees, INR):
 - Monthly income: ${snapshot.monthlyIncome}
 - Monthly expenses: ${snapshot.monthlyExpense}
 - Needs spending: ${snapshot.needsSpend}
@@ -31,8 +31,9 @@ financial summary for the current month (all amounts in USD):
 
 Give 3 to 5 short, specific, actionable recommendations (max 2 sentences each)
 to improve this person's financial health this month. Reference concrete
-dollar amounts where useful. Return each recommendation as its own line with
-no numbering, bullets, or markdown formatting.`;
+rupee amounts (use the Rs or INR prefix, never a dollar sign) where useful.
+Return each recommendation as its own line with no numbering, bullets, or
+markdown formatting.`;
 
   try {
     const response = await fetch(

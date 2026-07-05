@@ -12,6 +12,7 @@ import { useTransactions } from "@/hooks/useTransactions";
 import { addTransaction, deleteTransaction } from "@/lib/firestore/transactions";
 import { sendPushToSelf } from "@/lib/notifications/fcm";
 import type { NewTransaction } from "@/lib/types";
+import { formatCurrency } from "@/lib/utils";
 
 function TransactionsContent() {
   const { user } = useAuth();
@@ -28,7 +29,7 @@ function TransactionsContent() {
       await sendPushToSelf(
         idToken,
         "Red Flag Transaction Logged",
-        `${transaction.description}: an unhealthy financial decision of $${transaction.amount}.`
+        `${transaction.description}: an unhealthy financial decision of ${formatCurrency(transaction.amount)}.`
       );
     } else {
       toast.success("Transaction added");
