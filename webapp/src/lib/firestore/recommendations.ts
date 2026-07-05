@@ -6,7 +6,7 @@ import { getFirebaseDb } from "@/lib/firebase/client";
 // "Refresh advice".
 export interface CachedRecommendations {
   recommendations: string[];
-  source: "gemini" | "fallback";
+  source: "ai" | "fallback";
   generatedAt: string; // ISO datetime
 }
 
@@ -23,7 +23,7 @@ export async function loadCachedRecommendations(
   if (!Array.isArray(data.recommendations)) return null;
   return {
     recommendations: data.recommendations as string[],
-    source: data.source === "gemini" ? "gemini" : "fallback",
+    source: data.source === "ai" ? "ai" : "fallback",
     generatedAt: typeof data.generatedAt === "string" ? data.generatedAt : new Date().toISOString(),
   };
 }

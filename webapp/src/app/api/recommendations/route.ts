@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyIdTokenViaRest } from "@/lib/firebase/verifyToken";
 import { generateFallbackRecommendations, type FinancialSnapshot } from "@/lib/recommendations/engine";
-import { generateGeminiAdvice, type AdviceTransaction } from "@/lib/recommendations/gemini";
+import { generateAdvice } from "@/lib/ai";
+import type { AdviceTransaction } from "@/lib/types";
 
 // Allow enough time for a Gemini call plus one retry-with-backoff on 429.
 export const maxDuration = 30;
@@ -30,9 +31,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Missing snapshot in request body" }, { status: 400 });
   }
 
-  const geminiAdvice = await generateGeminiAdvice(snapshot, categoryBreakdown, transactions);
-  if (geminiAdvice && geminiAdvice.length > 0) {
-    return NextResponse.json({ source: "gemini", recommendations: geminiAdvice });
+  const aiAdvice = await generateAdvice(snapshot, categoryBreakdown, transactions);
+  if (aiAdvice && aiAdvice.length > 0) {
+    return NextResponse.json({ source: "ai", recommendations: aiAdvice });
   }
 
   const fallback = generateFallbackRecommendations(snapshot);

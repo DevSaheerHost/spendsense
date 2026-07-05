@@ -98,12 +98,12 @@ export function RecommendationsPanel({
       const data = await response.json();
       const next: CachedRecommendations = {
         recommendations: data.recommendations ?? [],
-        source: data.source === "gemini" ? "gemini" : "fallback",
+        source: data.source === "ai" ? "ai" : "fallback",
         generatedAt: new Date().toISOString(),
       };
-      // The endpoint always returns 200; a "fallback" source means Gemini did
-      // not produce the result (e.g. rate-limited), so count that as a failure.
-      ok = next.source === "gemini";
+      // The endpoint always returns 200; a "fallback" source means no AI
+      // provider produced the result (e.g. rate-limited), so count as failure.
+      ok = next.source === "ai";
       setCached(next);
       saveCachedRecommendations(user.uid, next).catch(() => {});
       refreshCooldown.start();
@@ -126,7 +126,7 @@ export function RecommendationsPanel({
         <div className="mb-1 flex items-center justify-between gap-2">
           <h3 className="text-sm font-semibold text-slate-700">Smart Recommendations</h3>
           <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
-            {source === "gemini" ? "AI-generated" : "Rule-based (50/30/20)"}
+            {source === "ai" ? "AI-generated" : "Rule-based (50/30/20)"}
           </span>
         </div>
         <div className="mb-3 flex items-center justify-between gap-2">

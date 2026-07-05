@@ -7,16 +7,7 @@ import { SpeakButton } from "@/components/recommendations/SpeakButton";
 import { recordAiUsage } from "@/lib/firestore/aiUsage";
 import { clearChatHistory, loadChatHistory, saveChatHistory } from "@/lib/firestore/chat";
 import type { FinancialSnapshot } from "@/lib/recommendations/engine";
-import type { ChatMessage } from "@/lib/types";
-
-interface AdviceTransaction {
-  type: "income" | "expense";
-  amount: number;
-  description: string;
-  category: string;
-  flag: "green" | "yellow" | "red";
-  date: string;
-}
+import type { AdviceTransaction, ChatMessage } from "@/lib/types";
 
 interface ChatPanelProps {
   snapshot: FinancialSnapshot;

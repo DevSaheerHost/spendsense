@@ -31,7 +31,7 @@ export function AiUsageNote() {
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-slate-700">AI Usage</h3>
         <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
-          Gemini free tier
+          Free tier
         </span>
       </div>
       <div className="mt-3 grid grid-cols-2 gap-4">

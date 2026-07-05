@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyIdTokenViaRest } from "@/lib/firebase/verifyToken";
-import { suggestCategory } from "@/lib/recommendations/gemini";
+import { suggestCategory } from "@/lib/ai";
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "@/lib/types";
 
 // Allow enough time for a Gemini call plus one retry-with-backoff on 429.
