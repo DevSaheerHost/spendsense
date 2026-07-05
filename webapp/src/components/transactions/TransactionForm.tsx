@@ -40,7 +40,7 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
     async (desc: string, txType: TransactionType, silent: boolean) => {
       if (!user || !desc.trim()) return;
       setSuggesting(true);
-      recordAiUsage(user.uid);
+      let ok = false;
       try {
         const idToken = await user.getIdToken();
         const response = await fetch("/api/categorize", {
@@ -53,6 +53,7 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
         const allowed = txType === "expense" ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
         if (data.category && (allowed as readonly string[]).includes(data.category)) {
           setCategory(data.category);
+          ok = true;
           if (!silent) toast.success(`AI set category: ${data.category}`);
         } else if (!silent) {
           toast.error("Couldn't suggest a category.");
@@ -62,6 +63,7 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
       } finally {
         setSuggesting(false);
         categorizeCooldown.start();
+        recordAiUsage(user.uid, ok);
       }
     },
     [user, categorizeCooldown]

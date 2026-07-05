@@ -1,8 +1,8 @@
 import { doc, increment, onSnapshot, serverTimestamp, setDoc } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase/client";
 
-// Tracks how many Gemini-backed requests the user has made (advice refreshes,
-// chat messages, auto-categorize), so the app can surface usage against the
+// Tracks Gemini-backed requests split by outcome (success vs. failed), both
+// per-day and all-time, so the app can surface real usage against the
 // free-tier limits.
 function usageRef(uid: string) {
   return doc(getFirebaseDb(), "users", uid, "ai", "usage");
@@ -14,29 +14,45 @@ function todayKey(date = new Date()): string {
   ).padStart(2, "0")}`;
 }
 
-export async function recordAiUsage(uid: string): Promise<void> {
-  // Atomic increments (per-day + all-time) so concurrent tabs don't clobber
-  // each other. Errors are swallowed — usage tracking must never break a flow.
+export async function recordAiUsage(uid: string, success: boolean): Promise<void> {
+  const field = success ? "success" : "failed";
+  // Atomic increments so concurrent tabs don't clobber each other. Errors are
+  // swallowed — usage tracking must never break a flow.
   await setDoc(
     usageRef(uid),
-    { total: increment(1), daily: { [todayKey()]: increment(1) }, updatedAt: serverTimestamp() },
+    {
+      totals: { [field]: increment(1) },
+      daily: { [todayKey()]: { [field]: increment(1) } },
+      updatedAt: serverTimestamp(),
+    },
     { merge: true }
   ).catch(() => {});
 }
 
-export interface AiUsage {
-  today: number;
-  total: number;
+export interface AiUsageCounts {
+  success: number;
+  failed: number;
 }
+
+export interface AiUsage {
+  today: AiUsageCounts;
+  total: AiUsageCounts;
+}
+
+const EMPTY: AiUsage = { today: { success: 0, failed: 0 }, total: { success: 0, failed: 0 } };
 
 export function subscribeToAiUsage(uid: string, onChange: (usage: AiUsage) => void): () => void {
   return onSnapshot(
     usageRef(uid),
     (snapshot) => {
       const data = snapshot.data();
-      const daily = (data?.daily as Record<string, number> | undefined) ?? {};
-      onChange({ today: daily[todayKey()] ?? 0, total: data?.total ?? 0 });
+      const totals = (data?.totals as Partial<AiUsageCounts>) ?? {};
+      const daily = ((data?.daily as Record<string, Partial<AiUsageCounts>>) ?? {})[todayKey()] ?? {};
+      onChange({
+        today: { success: daily.success ?? 0, failed: daily.failed ?? 0 },
+        total: { success: totals.success ?? 0, failed: totals.failed ?? 0 },
+      });
     },
-    () => onChange({ today: 0, total: 0 })
+    () => onChange(EMPTY)
   );
 }

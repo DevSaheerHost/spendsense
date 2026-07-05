@@ -67,7 +67,7 @@ export function ChatPanel({
     setInput("");
     setError(null);
     setSending(true);
-    recordAiUsage(user.uid);
+    let ok = false;
 
     try {
       const idToken = await user.getIdToken();
@@ -80,6 +80,7 @@ export function ChatPanel({
       const data = await response.json();
       const withReply: ChatMessage[] = [...nextMessages, { role: "model", text: data.reply }];
       setMessages(withReply);
+      ok = true;
       saveChatHistory(user.uid, withReply).catch(() => {});
       requestAnimationFrame(() => {
         scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -89,6 +90,7 @@ export function ChatPanel({
     } finally {
       setSending(false);
       cooldown.start();
+      recordAiUsage(user.uid, ok);
     }
   }
 
