@@ -5,6 +5,10 @@ import type { FinancialSnapshot } from "@/lib/recommendations/engine";
 // if your key has quota for a different model.
 const GEMINI_MODEL = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
 
+// Language the AI recommendations are written in. Defaults to Malayalam;
+// override with GEMINI_ADVICE_LANGUAGE (e.g. "English", "Hindi", "Tamil").
+const ADVICE_LANGUAGE = process.env.GEMINI_ADVICE_LANGUAGE ?? "Malayalam";
+
 /**
  * Calls the free-tier Google Gemini API to generate personalized financial
  * advice. Returns null (rather than throwing) whenever the API key is
@@ -32,8 +36,9 @@ financial summary for the current month (all amounts in Indian Rupees, INR):
 Give 3 to 5 short, specific, actionable recommendations (max 2 sentences each)
 to improve this person's financial health this month. Reference concrete
 rupee amounts (use the Rs or INR prefix, never a dollar sign) where useful.
-Return each recommendation as its own line with no numbering, bullets, or
-markdown formatting.`;
+Write every recommendation in ${ADVICE_LANGUAGE}. Keep numbers, currency
+amounts, and the Rs/INR prefix in standard digits. Return each recommendation
+as its own line with no numbering, bullets, or markdown formatting.`;
 
   try {
     const response = await fetch(
