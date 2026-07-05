@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCooldown } from "@/hooks/useCooldown";
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, type FlagType, type NewTransaction, type TransactionType } from "@/lib/types";
 
 interface TransactionFormProps {
@@ -10,9 +11,11 @@ interface TransactionFormProps {
 }
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
+const AUTO_CATEGORIZE_DELAY = 1200; // ms of typing idle before auto-categorizing
 
 export function TransactionForm({ onSubmit }: TransactionFormProps) {
   const { user } = useAuth();
+  const categorizeCooldown = useCooldown(4000);
   const [type, setType] = useState<TransactionType>("expense");
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
@@ -21,40 +24,76 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
   const [date, setDate] = useState(todayIso());
   const [submitting, setSubmitting] = useState(false);
   const [suggesting, setSuggesting] = useState(false);
+  // Once the user picks a category by hand, stop auto-overriding it.
+  const [categoryTouched, setCategoryTouched] = useState(false);
+  // De-dupe so the same text+type is never sent to the AI twice.
+  const lastAutoKeyRef = useRef<string>("");
 
   const categories = type === "expense" ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
 
   // Ask the AI to pick a category from the description, so the user doesn't
   // have to categorize manually (and mistakes like "Biryani" under Healthcare
-  // get corrected).
-  async function handleSuggestCategory() {
-    if (!user || !description.trim() || suggesting) return;
-    setSuggesting(true);
-    try {
-      const idToken = await user.getIdToken();
-      const response = await fetch("/api/categorize", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
-        body: JSON.stringify({ description: description.trim(), type }),
-      });
-      if (!response.ok) throw new Error("failed");
-      const data = await response.json();
-      if (data.category && (categories as readonly string[]).includes(data.category)) {
-        setCategory(data.category);
-        toast.success(`AI set category: ${data.category}`);
-      } else {
-        toast.error("Couldn't suggest a category.");
+  // get corrected). `silent` mode is used by the automatic path so it does not
+  // fire a success toast on every keystroke pause.
+  const runCategorize = useCallback(
+    async (desc: string, txType: TransactionType, silent: boolean) => {
+      if (!user || !desc.trim()) return;
+      setSuggesting(true);
+      try {
+        const idToken = await user.getIdToken();
+        const response = await fetch("/api/categorize", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+          body: JSON.stringify({ description: desc.trim(), type: txType }),
+        });
+        if (!response.ok) throw new Error("failed");
+        const data = await response.json();
+        const allowed = txType === "expense" ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
+        if (data.category && (allowed as readonly string[]).includes(data.category)) {
+          setCategory(data.category);
+          if (!silent) toast.success(`AI set category: ${data.category}`);
+        } else if (!silent) {
+          toast.error("Couldn't suggest a category.");
+        }
+      } catch {
+        if (!silent) toast.error("Couldn't suggest a category.");
+      } finally {
+        setSuggesting(false);
+        categorizeCooldown.start();
       }
-    } catch {
-      toast.error("Couldn't suggest a category.");
-    } finally {
-      setSuggesting(false);
+    },
+    [user, categorizeCooldown]
+  );
+
+  // Auto-categorize: after the user stops typing the description, ask the AI to
+  // set the category (unless they already chose one manually). Debounced and
+  // de-duplicated to keep AI calls — and free-tier rate limits — to a minimum,
+  // and skipped while a cooldown from a recent call is active.
+  useEffect(() => {
+    const desc = description.trim();
+    const key = `${type}|${desc.toLowerCase()}`;
+    if (
+      !user ||
+      categoryTouched ||
+      categorizeCooldown.cooling ||
+      desc.length < 3 ||
+      key === lastAutoKeyRef.current
+    ) {
+      return;
     }
-  }
+
+    const handle = setTimeout(() => {
+      lastAutoKeyRef.current = key;
+      runCategorize(desc, type, true);
+    }, AUTO_CATEGORIZE_DELAY);
+    return () => clearTimeout(handle);
+  }, [description, type, user, categoryTouched, categorizeCooldown.cooling, runCategorize]);
 
   function handleTypeChange(nextType: TransactionType) {
     setType(nextType);
     setCategory(nextType === "expense" ? EXPENSE_CATEGORIES[0] : INCOME_CATEGORIES[0]);
+    setCategoryTouched(false);
+    lastAutoKeyRef.current = "";
     if (nextType === "income") setFlag("green");
   }
 
@@ -77,6 +116,8 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
       setDescription("");
       setFlag("green");
       setDate(todayIso());
+      setCategoryTouched(false);
+      lastAutoKeyRef.current = "";
     } finally {
       setSubmitting(false);
     }
@@ -143,17 +184,20 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
             <label className="block text-sm font-medium text-slate-700">Category</label>
             <button
               type="button"
-              onClick={handleSuggestCategory}
-              disabled={suggesting || !description.trim()}
-              title="Let AI pick a category from your description"
+              onClick={() => runCategorize(description, type, false)}
+              disabled={suggesting || categorizeCooldown.cooling || !description.trim()}
+              title="Auto-fills from your description; tap to re-run"
               className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 disabled:text-slate-300"
             >
-              {suggesting ? "Suggesting..." : "✨ AI"}
+              {suggesting ? "✨ Categorizing…" : categorizeCooldown.cooling ? "✨ Wait…" : "✨ Auto"}
             </button>
           </div>
           <select
             value={category}
-            onChange={(e) => setCategory(e.target.value)}
+            onChange={(e) => {
+              setCategory(e.target.value);
+              setCategoryTouched(true);
+            }}
             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
           >
             {categories.map((c) => (
