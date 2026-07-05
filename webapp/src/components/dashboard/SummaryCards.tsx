@@ -1,15 +1,17 @@
 import { formatCurrency } from "@/lib/utils";
 
 interface SummaryCardsProps {
-  income: number;
+  monthlyIncome: number; // fixed income the user set
+  extraIncome: number; // one-off income transactions this month
   expense: number;
   balance: number;
 }
 
-export function SummaryCards({ income, expense, balance }: SummaryCardsProps) {
+export function SummaryCards({ monthlyIncome, extraIncome, expense, balance }: SummaryCardsProps) {
   const cards = [
-    { label: "Monthly Income", value: income, className: "text-emerald-600" },
-    { label: "Monthly Expense", value: expense, className: "text-red-600" },
+    { label: "Monthly Income", value: monthlyIncome, className: "text-emerald-600" },
+    { label: "Extra Income", value: extraIncome, className: "text-emerald-600" },
+    { label: "Expenses", value: expense, className: "text-red-600" },
     {
       label: "Balance",
       value: balance,
@@ -18,7 +20,7 @@ export function SummaryCards({ income, expense, balance }: SummaryCardsProps) {
   ];
 
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       {cards.map((card) => (
         <div key={card.label} className="rounded-xl border border-slate-200 bg-white p-4">
           <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{card.label}</p>
