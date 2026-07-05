@@ -1,9 +1,11 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { SpeakButton } from "@/components/recommendations/SpeakButton";
+import { clearChatHistory, loadChatHistory, saveChatHistory } from "@/lib/firestore/chat";
 import type { FinancialSnapshot } from "@/lib/recommendations/engine";
+import type { ChatMessage } from "@/lib/types";
 
 interface AdviceTransaction {
   type: "income" | "expense";
@@ -12,11 +14,6 @@ interface AdviceTransaction {
   category: string;
   flag: "green" | "yellow" | "red";
   date: string;
-}
-
-interface ChatMessage {
-  role: "user" | "model";
-  text: string;
 }
 
 interface ChatPanelProps {
@@ -43,6 +40,20 @@ export function ChatPanel({
   const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Load the persisted conversation (the AI's memory) once the user is known.
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    loadChatHistory(user.uid)
+      .then((history) => {
+        if (!cancelled) setMessages(history);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
   async function sendMessage(e: React.FormEvent) {
     e.preventDefault();
     const question = input.trim();
@@ -63,7 +74,9 @@ export function ChatPanel({
       });
       if (!response.ok) throw new Error("Request failed");
       const data = await response.json();
-      setMessages((prev) => [...prev, { role: "model", text: data.reply }]);
+      const withReply: ChatMessage[] = [...nextMessages, { role: "model", text: data.reply }];
+      setMessages(withReply);
+      saveChatHistory(user.uid, withReply).catch(() => {});
       requestAnimationFrame(() => {
         scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
       });
@@ -74,11 +87,29 @@ export function ChatPanel({
     }
   }
 
+  async function handleClear() {
+    if (!user) return;
+    setMessages([]);
+    setError(null);
+    await clearChatHistory(user.uid).catch(() => {});
+  }
+
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-4">
-      <h3 className="mb-1 text-sm font-semibold text-slate-700">Ask the AI Advisor</h3>
+      <div className="mb-1 flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-slate-700">Ask the AI Advisor</h3>
+        {messages.length > 0 && (
+          <button
+            onClick={handleClear}
+            className="text-xs font-medium text-slate-400 hover:text-red-600"
+          >
+            Clear memory
+          </button>
+        )}
+      </div>
       <p className="mb-3 text-xs text-slate-500">
-        Ask a follow-up question about your income, spending, or loans.
+        Ask a follow-up question about your income, spending, or loans. The chat remembers your
+        past conversation.
       </p>
 
       {messages.length > 0 && (
@@ -90,9 +121,7 @@ export function ChatPanel({
             >
               <div
                 className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm ${
-                  message.role === "user"
-                    ? "bg-indigo-600 text-white"
-                    : "bg-slate-100 text-slate-800"
+                  message.role === "user" ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-800"
                 }`}
               >
                 <p className="whitespace-pre-wrap">{message.text}</p>
