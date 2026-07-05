@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import { SummaryCards } from "@/components/dashboard/SummaryCards";
@@ -23,13 +23,43 @@ function DashboardContent() {
   const { snapshot, categoryBreakdown, trend } = useMonthlyStats(transactions, loans);
 
   const [budgetInput, setBudgetInput] = useState("");
-  const [notifStatus, setNotifStatus] = useState<"idle" | "enabling" | "enabled" | "denied">("idle");
+  // Reflects the browser's actual Notification.permission so the "enable" card
+  // does not reappear on every load once the user has already granted it.
+  const [permission, setPermission] = useState<NotificationPermission | "unsupported" | "loading">(
+    "loading"
+  );
+  const [enabling, setEnabling] = useState(false);
+  const tokenSyncedRef = useRef(false);
+
+  useEffect(() => {
+    // Sync the initial value from the browser's Notification API on mount.
+    // This one-time read of external state is exactly what an effect is for;
+    // it cannot run during SSR (no `Notification`), so a lazy initializer
+    // would cause a hydration mismatch.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPermission(
+      typeof window !== "undefined" && "Notification" in window ? Notification.permission : "unsupported"
+    );
+  }, []);
+
+  // When permission is already granted but this device's token was never saved
+  // (or was cleared), silently re-register it once so reminders can reach here.
+  useEffect(() => {
+    if (permission !== "granted" || !user || !profile || tokenSyncedRef.current) return;
+    if ((profile.fcmTokens?.length ?? 0) > 0) return;
+    tokenSyncedRef.current = true;
+    registerForPushNotifications(user.uid).catch(() => {});
+  }, [permission, user, profile]);
 
   async function handleEnableNotifications() {
     if (!user) return;
-    setNotifStatus("enabling");
-    const token = await registerForPushNotifications(user.uid);
-    setNotifStatus(token ? "enabled" : "denied");
+    setEnabling(true);
+    try {
+      const token = await registerForPushNotifications(user.uid);
+      setPermission(token ? "granted" : typeof Notification !== "undefined" ? Notification.permission : "denied");
+    } finally {
+      setEnabling(false);
+    }
   }
 
   async function handleSaveBudget(e: React.FormEvent) {
@@ -81,23 +111,25 @@ function DashboardContent() {
         </form>
       </div>
 
-      {notifStatus !== "enabled" && (
+      {(permission === "default" || permission === "denied") && (
         <div className="rounded-xl border border-slate-200 bg-white p-4">
           <h3 className="mb-1 text-sm font-semibold text-slate-700">Push Notifications</h3>
           <p className="mb-2 text-xs text-slate-500">
             Enable push notifications for EMI reminders, budget overspend warnings, and red-flag alerts.
           </p>
-          <button
-            onClick={handleEnableNotifications}
-            disabled={notifStatus === "enabling"}
-            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
-          >
-            {notifStatus === "enabling" ? "Enabling..." : "Enable notifications"}
-          </button>
-          {notifStatus === "denied" && (
-            <p className="mt-2 text-xs text-red-600">
-              Notification permission was denied or unsupported in this browser.
+          {permission === "denied" ? (
+            <p className="text-xs text-red-600">
+              Notifications are blocked for this site. To turn them on, allow notifications for this
+              site in your browser settings, then reload the page.
             </p>
+          ) : (
+            <button
+              onClick={handleEnableNotifications}
+              disabled={enabling}
+              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
+            >
+              {enabling ? "Enabling..." : "Enable notifications"}
+            </button>
           )}
         </div>
       )}
