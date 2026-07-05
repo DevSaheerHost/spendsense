@@ -74,9 +74,13 @@ cp .env.local.example .env.local
 ```
 
 - `NEXT_PUBLIC_FIREBASE_*` and `NEXT_PUBLIC_FIREBASE_VAPID_KEY` - client config (safe to expose to the browser).
-- `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY` - Admin SDK service account, used only in API routes. Keep these secret.
 - `GEMINI_API_KEY` - optional, get a free-tier key at [Google AI Studio](https://aistudio.google.com/apikey). If left empty, recommendations automatically use the local 50/30/20 fallback logic.
+- `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY` - Admin SDK service account, used only by the push-notification routes (`/api/notifications/send`, `/api/cron/check-reminders`). Keep these secret. **Not required for Gemini recommendations** - that route verifies the user's ID token via the Identity Toolkit REST API using only the Web API key, so it works with just `NEXT_PUBLIC_FIREBASE_API_KEY` + `GEMINI_API_KEY`.
 - `CRON_SECRET` - a random string you choose, used to authorize the daily reminders job.
+
+> **Model note:** the recommendation engine defaults to `gemini-2.5-flash`
+> (free-tier eligible). Override with `GEMINI_MODEL` if your key has quota for
+> a different model.
 
 Also update `public/firebase-messaging-sw.js` with the same `NEXT_PUBLIC_FIREBASE_*` values (service workers cannot read `.env` files, so the config is duplicated there).
 

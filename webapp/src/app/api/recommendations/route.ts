@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAdminAuth } from "@/lib/firebase/admin";
+import { verifyIdTokenViaRest } from "@/lib/firebase/verifyToken";
 import { generateFallbackRecommendations, type FinancialSnapshot } from "@/lib/recommendations/engine";
 import { generateGeminiAdvice } from "@/lib/recommendations/gemini";
 
@@ -10,9 +10,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Missing Authorization bearer token" }, { status: 401 });
   }
 
-  try {
-    await getAdminAuth().verifyIdToken(idToken);
-  } catch {
+  // Verify the Firebase ID token via the Identity Toolkit REST API, which
+  // only needs the Web API key (no Admin SDK service account). This keeps
+  // the endpoint protected against anonymous abuse of the Gemini quota.
+  const verified = await verifyIdTokenViaRest(idToken);
+  if (!verified) {
     return NextResponse.json({ error: "Invalid or expired token" }, { status: 401 });
   }
 
