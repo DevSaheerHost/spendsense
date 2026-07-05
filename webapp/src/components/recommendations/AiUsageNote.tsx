@@ -2,6 +2,25 @@
 
 import { useAuth } from "@/contexts/AuthContext";
 import { useAiUsage } from "@/hooks/useAiUsage";
+import type { AiUsageCounts } from "@/lib/firestore/aiUsage";
+
+function UsageColumn({ label, counts }: { label: string; counts: AiUsageCounts }) {
+  return (
+    <div>
+      <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{label}</p>
+      <div className="mt-1 flex gap-4">
+        <p className="flex items-baseline gap-1">
+          <span className="text-2xl font-bold text-emerald-600">{counts.success}</span>
+          <span className="text-xs text-slate-500">success</span>
+        </p>
+        <p className="flex items-baseline gap-1">
+          <span className="text-2xl font-bold text-red-600">{counts.failed}</span>
+          <span className="text-xs text-slate-500">failed</span>
+        </p>
+      </div>
+    </div>
+  );
+}
 
 export function AiUsageNote() {
   const { user } = useAuth();
@@ -15,19 +34,13 @@ export function AiUsageNote() {
           Gemini free tier
         </span>
       </div>
-      <div className="mt-2 flex gap-6">
-        <div>
-          <p className="text-2xl font-bold text-slate-900">{usage.today}</p>
-          <p className="text-xs text-slate-500">requests today</p>
-        </div>
-        <div>
-          <p className="text-2xl font-bold text-slate-900">{usage.total}</p>
-          <p className="text-xs text-slate-500">all-time</p>
-        </div>
+      <div className="mt-3 grid grid-cols-2 gap-4">
+        <UsageColumn label="Today" counts={usage.today} />
+        <UsageColumn label="All-time" counts={usage.total} />
       </div>
-      <p className="mt-2 text-xs text-slate-400">
-        Each advice refresh, chat message, and auto-categorize uses one AI request. The free tier
-        limits requests per minute — if you hit a limit, wait a moment and try again.
+      <p className="mt-3 text-xs text-slate-400">
+        Each advice refresh, chat message, and auto-categorize is one AI request. Failed requests are
+        usually the free-tier per-minute limit — wait a moment and try again.
       </p>
     </div>
   );

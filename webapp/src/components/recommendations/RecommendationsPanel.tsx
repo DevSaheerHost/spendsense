@@ -86,7 +86,7 @@ export function RecommendationsPanel({
   async function handleRefresh() {
     if (!user || refreshing || refreshCooldown.cooling) return;
     setRefreshing(true);
-    recordAiUsage(user.uid);
+    let ok = false;
     try {
       const idToken = await user.getIdToken();
       const response = await fetch("/api/recommendations", {
@@ -101,13 +101,18 @@ export function RecommendationsPanel({
         source: data.source === "gemini" ? "gemini" : "fallback",
         generatedAt: new Date().toISOString(),
       };
+      // The endpoint always returns 200; a "fallback" source means Gemini did
+      // not produce the result (e.g. rate-limited), so count that as a failure.
+      ok = next.source === "gemini";
       setCached(next);
       saveCachedRecommendations(user.uid, next).catch(() => {});
       refreshCooldown.start();
+      if (!ok) toast("AI was busy — showing rule-based advice.");
     } catch {
       toast.error("Couldn't refresh advice. Please try again shortly.");
     } finally {
       setRefreshing(false);
+      recordAiUsage(user.uid, ok);
     }
   }
 
