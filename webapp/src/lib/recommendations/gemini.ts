@@ -1,7 +1,9 @@
 import "server-only";
 import type { FinancialSnapshot } from "@/lib/recommendations/engine";
 
-const GEMINI_MODEL = "gemini-2.0-flash";
+// gemini-2.5-flash is on the free tier and fast; override with GEMINI_MODEL
+// if your key has quota for a different model.
+const GEMINI_MODEL = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
 
 /**
  * Calls the free-tier Google Gemini API to generate personalized financial

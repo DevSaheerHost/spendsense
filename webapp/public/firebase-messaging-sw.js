@@ -5,12 +5,12 @@ importScripts("https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging-com
 // it is safe to hardcode them here. Replace with your project's config, or
 // keep in sync with the NEXT_PUBLIC_FIREBASE_* values in your .env.local.
 firebase.initializeApp({
-  apiKey: "REPLACE_WITH_NEXT_PUBLIC_FIREBASE_API_KEY",
-  authDomain: "REPLACE_WITH_NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN",
-  projectId: "REPLACE_WITH_NEXT_PUBLIC_FIREBASE_PROJECT_ID",
-  storageBucket: "REPLACE_WITH_NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET",
-  messagingSenderId: "REPLACE_WITH_NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID",
-  appId: "REPLACE_WITH_NEXT_PUBLIC_FIREBASE_APP_ID",
+  apiKey: "AIzaSyDNAxmbAi5prBXsYhnVTXXfhtn80Ni9acw",
+  authDomain: "testloginweb-f42ec.firebaseapp.com",
+  projectId: "testloginweb-f42ec",
+  storageBucket: "testloginweb-f42ec.firebasestorage.app",
+  messagingSenderId: "280632803058",
+  appId: "1:280632803058:web:b33a9733887a4d63ab5a6b",
 });
 
 const messaging = firebase.messaging();
