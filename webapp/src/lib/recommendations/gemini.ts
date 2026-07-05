@@ -59,27 +59,43 @@ function buildContextBlock(
 
 // Single low-level call to Gemini's generateContent. Returns the raw text, or
 // null on missing key / network error / bad response so callers can degrade.
+// Transient free-tier rate limits (HTTP 429) are retried once with a short
+// backoff so a brief per-minute limit recovers by itself instead of surfacing
+// an error to the user.
 async function callGemini(body: unknown, timeoutMs = 12_000): Promise<string | null> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return null;
 
-  try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
-      {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
+  const maxAttempts = 2;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const response = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
         signal: AbortSignal.timeout(timeoutMs),
+      });
+
+      if (response.status === 429 && attempt < maxAttempts) {
+        // Respect Retry-After when present, otherwise back off ~3.5s (capped so
+        // the whole request stays within the serverless function timeout).
+        const retryAfter = Number(response.headers.get("retry-after"));
+        const delayMs = Math.min((retryAfter > 0 ? retryAfter : 3.5) * 1000, 4000);
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+        continue;
       }
-    );
-    if (!response.ok) return null;
-    const data = await response.json();
-    const text: string | undefined = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-    return text ?? null;
-  } catch {
-    return null;
+
+      if (!response.ok) return null;
+      const data = await response.json();
+      const text: string | undefined = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      return text ?? null;
+    } catch {
+      return null;
+    }
   }
+  return null;
 }
 
 /**

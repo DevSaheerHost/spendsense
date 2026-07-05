@@ -3,6 +3,9 @@ import { verifyIdTokenViaRest } from "@/lib/firebase/verifyToken";
 import { suggestCategory } from "@/lib/recommendations/gemini";
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "@/lib/types";
 
+// Allow enough time for a Gemini call plus one retry-with-backoff on 429.
+export const maxDuration = 30;
+
 // Suggests the best category for a transaction from its description using the
 // AI. Protected by the same REST ID-token check as the other AI routes.
 export async function POST(request: NextRequest) {
