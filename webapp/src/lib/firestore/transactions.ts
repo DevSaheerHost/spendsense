@@ -10,11 +10,11 @@ import {
   Timestamp,
   updateDoc,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
+import { getFirebaseDb } from "@/lib/firebase/client";
 import type { NewTransaction, Transaction } from "@/lib/types";
 
 function transactionsCol(uid: string) {
-  return collection(db, "users", uid, "transactions");
+  return collection(getFirebaseDb(), "users", uid, "transactions");
 }
 
 export function subscribeToTransactions(
@@ -54,9 +54,9 @@ export async function updateTransaction(
   id: string,
   updates: Partial<NewTransaction>
 ) {
-  await updateDoc(doc(db, "users", uid, "transactions", id), updates);
+  await updateDoc(doc(getFirebaseDb(), "users", uid, "transactions", id), updates);
 }
 
 export async function deleteTransaction(uid: string, id: string) {
-  await deleteDoc(doc(db, "users", uid, "transactions", id));
+  await deleteDoc(doc(getFirebaseDb(), "users", uid, "transactions", id));
 }

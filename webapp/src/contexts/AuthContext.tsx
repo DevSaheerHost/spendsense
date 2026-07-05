@@ -16,7 +16,7 @@ import {
   type User,
 } from "firebase/auth";
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase/client";
+import { getFirebaseAuth, getFirebaseDb } from "@/lib/firebase/client";
 
 interface AuthContextValue {
   user: User | null;
@@ -33,7 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(getFirebaseAuth(), (firebaseUser) => {
       setUser(firebaseUser);
       setLoading(false);
     });
@@ -45,12 +45,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       loading,
       async login(email, password) {
-        await signInWithEmailAndPassword(auth, email, password);
+        await signInWithEmailAndPassword(getFirebaseAuth(), email, password);
       },
       async register(email, password) {
-        const credential = await createUserWithEmailAndPassword(auth, email, password);
+        const credential = await createUserWithEmailAndPassword(getFirebaseAuth(), email, password);
         // One email == one user document, keyed by the Firebase Auth UID.
-        const userRef = doc(db, "users", credential.user.uid);
+        const userRef = doc(getFirebaseDb(), "users", credential.user.uid);
         const existing = await getDoc(userRef);
         if (!existing.exists()) {
           await setDoc(userRef, {
@@ -62,7 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       },
       async logout() {
-        await signOut(auth);
+        await signOut(getFirebaseAuth());
       },
     }),
     [user, loading]
