@@ -37,6 +37,10 @@ export interface UserProfile {
   uid: string;
   email: string;
   displayName?: string;
+  // The user's fixed/regular monthly income (e.g. salary), set once. Distinct
+  // from one-off income transactions (shop sales, tips, gifts), which are
+  // tracked separately as "extra income".
+  monthlyIncome?: number;
   monthlyBudget?: number;
   createdAt: string;
   fcmTokens?: string[];

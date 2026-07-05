@@ -2,7 +2,11 @@ import { CATEGORY_BUCKET, type Loan, type Transaction } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
 
 export interface FinancialSnapshot {
+  // Total income = fixed monthly income (set by the user) + extra income logged
+  // as transactions this month.
   monthlyIncome: number;
+  baseMonthlyIncome: number; // the fixed amount the user set
+  extraIncome: number; // one-off income transactions (sales, tips, gifts)
   monthlyExpense: number;
   needsSpend: number;
   wantsSpend: number;
@@ -12,11 +16,16 @@ export interface FinancialSnapshot {
   monthlyEmiTotal: number;
 }
 
-export function buildSnapshot(transactions: Transaction[], loans: Loan[]): FinancialSnapshot {
+export function buildSnapshot(
+  transactions: Transaction[],
+  loans: Loan[],
+  baseMonthlyIncome = 0
+): FinancialSnapshot {
   const income = transactions.filter((t) => t.type === "income");
   const expenses = transactions.filter((t) => t.type === "expense");
 
-  const monthlyIncome = income.reduce((sum, t) => sum + t.amount, 0);
+  const extraIncome = income.reduce((sum, t) => sum + t.amount, 0);
+  const monthlyIncome = baseMonthlyIncome + extraIncome;
   const monthlyExpense = expenses.reduce((sum, t) => sum + t.amount, 0);
 
   const needsSpend = expenses
@@ -38,6 +47,8 @@ export function buildSnapshot(transactions: Transaction[], loans: Loan[]): Finan
 
   return {
     monthlyIncome,
+    baseMonthlyIncome,
+    extraIncome,
     monthlyExpense,
     needsSpend,
     wantsSpend,

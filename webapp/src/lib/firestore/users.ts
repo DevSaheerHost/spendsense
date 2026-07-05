@@ -19,6 +19,10 @@ export async function setMonthlyBudget(uid: string, monthlyBudget: number) {
   await setDoc(doc(getFirebaseDb(), "users", uid), { monthlyBudget }, { merge: true });
 }
 
+export async function setMonthlyIncome(uid: string, monthlyIncome: number) {
+  await setDoc(doc(getFirebaseDb(), "users", uid), { monthlyIncome }, { merge: true });
+}
+
 export async function saveFcmToken(uid: string, token: string) {
   await updateDoc(doc(getFirebaseDb(), "users", uid), {
     fcmTokens: arrayUnion(token),

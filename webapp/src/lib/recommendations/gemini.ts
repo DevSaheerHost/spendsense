@@ -32,7 +32,7 @@ function buildContextBlock(
 ): string {
   const lines = [
     "The user's financial summary for the current month (all amounts in Indian Rupees, INR):",
-    `- Monthly income: ${snapshot.monthlyIncome}`,
+    `- Total income: ${snapshot.monthlyIncome} (fixed monthly income ${snapshot.baseMonthlyIncome} + extra one-off income ${snapshot.extraIncome})`,
     `- Monthly expenses: ${snapshot.monthlyExpense}`,
     `- Needs spending: ${snapshot.needsSpend}`,
     `- Wants spending: ${snapshot.wantsSpend}`,
