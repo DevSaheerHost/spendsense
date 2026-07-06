@@ -6,6 +6,7 @@ import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import { SummaryCards } from "@/components/dashboard/SummaryCards";
 import { ExpensePieChart } from "@/components/dashboard/ExpensePieChart";
 import { TrendChart } from "@/components/dashboard/TrendChart";
+import { SpendingHeatmap } from "@/components/dashboard/SpendingHeatmap";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useLoans } from "@/hooks/useLoans";
@@ -191,6 +192,7 @@ function DashboardContent() {
 
       <ExpensePieChart categoryBreakdown={categoryBreakdown} />
       <TrendChart trend={trend} />
+      <SpendingHeatmap transactions={transactions} />
     </div>
   );
 }
