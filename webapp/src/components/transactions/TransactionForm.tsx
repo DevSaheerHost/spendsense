@@ -4,8 +4,16 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCooldown } from "@/hooks/useCooldown";
+import { VoiceEntry } from "@/components/transactions/VoiceEntry";
 import { recordAiUsage } from "@/lib/firestore/aiUsage";
-import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, type FlagType, type NewTransaction, type TransactionType } from "@/lib/types";
+import {
+  EXPENSE_CATEGORIES,
+  INCOME_CATEGORIES,
+  type FlagType,
+  type NewTransaction,
+  type ParsedTransaction,
+  type TransactionType,
+} from "@/lib/types";
 
 interface TransactionFormProps {
   onSubmit: (transaction: NewTransaction) => Promise<void>;
@@ -106,6 +114,18 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
     if (nextType === "income") setFlag("green");
   }
 
+  // Fill the form from a voice-parsed transaction. Mark the category as
+  // user-set so the auto-categorize effect doesn't override the AI's choice.
+  function applyParsed(parsed: ParsedTransaction) {
+    setType(parsed.type);
+    setAmount(String(parsed.amount));
+    setDescription(parsed.description);
+    setCategory(parsed.category);
+    setFlag(parsed.flag);
+    setCategoryTouched(true);
+    lastAutoKeyRef.current = `${parsed.type}|${parsed.description.toLowerCase()}`;
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const parsedAmount = Number(amount);
@@ -136,6 +156,8 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border border-slate-200 bg-white p-4">
+      <VoiceEntry onParsed={applyParsed} />
+
       <div className="flex gap-2">
         {(["expense", "income"] as TransactionType[]).map((t) => (
           <button

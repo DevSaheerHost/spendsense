@@ -52,6 +52,15 @@ export interface ChatMessage {
   text: string;
 }
 
+// Result of parsing a spoken/typed sentence into a draft transaction.
+export interface ParsedTransaction {
+  type: TransactionType;
+  amount: number;
+  description: string;
+  category: string;
+  flag: FlagType;
+}
+
 // A trimmed transaction the AI can reason about (esp. the free-text
 // description, which explains exactly how the money was earned or spent).
 export interface AdviceTransaction {
