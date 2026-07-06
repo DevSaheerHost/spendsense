@@ -1,6 +1,6 @@
 import "server-only";
 import type { FinancialSnapshot } from "@/lib/recommendations/engine";
-import type { AdviceLoan, AdviceTransaction, ChatMessage } from "@/lib/types";
+import type { AdviceLoan, AdviceTransaction, ChatMessage, ParsedTransaction } from "@/lib/types";
 
 // Language the AI advice/chat is written in. Defaults to Malayalam; override
 // with AI_ADVICE_LANGUAGE (GEMINI_ADVICE_LANGUAGE is still honored for back-compat).
@@ -257,4 +257,63 @@ else. No punctuation, no explanation.`;
   if (exact) return exact;
   const lenient = categories.find((c) => c.toLowerCase() === cleaned.toLowerCase());
   return lenient ?? null;
+}
+
+/**
+ * Parses a spoken/typed sentence (Malayalam, English, or a mix) into a draft
+ * transaction. Returns a validated ParsedTransaction, or null if the AI is
+ * unavailable or the text can't be understood as a transaction.
+ */
+export async function parseTransaction(
+  transcript: string,
+  expenseCategories: readonly string[],
+  incomeCategories: readonly string[]
+): Promise<ParsedTransaction | null> {
+  if (!transcript.trim()) return null;
+
+  const prompt = `Extract a single personal-finance transaction from this
+spoken text (it may be in Malayalam, English, or a mix):
+"${transcript}"
+
+Return ONLY a JSON object (no markdown, no code fences, no explanation) with:
+- "type": "income" or "expense"
+- "amount": a positive number in Indian Rupees (just the number)
+- "description": a short, clear description of what the money was for, in English
+- "category": for an expense one of [${expenseCategories.join(", ")}]; for income one of [${incomeCategories.join(", ")}]
+- "flag": "green" (healthy/normal), "yellow" (neutral/uncertain), or "red" (unhealthy, e.g. gambling, betting, unnecessary luxury)
+
+If the text clearly describes money received (salary, sale, gift, refund), use
+"income"; otherwise "expense". Choose the single best-fitting category from the
+correct list.`;
+
+  const text = await callAI("", [{ role: "user", content: prompt }], 10_000);
+  if (!text) return null;
+
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) return null;
+
+  try {
+    const raw = JSON.parse(jsonMatch[0]);
+    const type: "income" | "expense" = raw.type === "income" ? "income" : "expense";
+    const amount = Number(raw.amount);
+    if (!Number.isFinite(amount) || amount <= 0) return null;
+
+    const allowed = type === "income" ? incomeCategories : expenseCategories;
+    const category =
+      allowed.find((c) => c === raw.category) ??
+      allowed.find((c) => c.toLowerCase() === String(raw.category).toLowerCase()) ??
+      allowed[allowed.length - 1];
+
+    const flag: "green" | "yellow" | "red" =
+      raw.flag === "red" ? "red" : raw.flag === "yellow" ? "yellow" : "green";
+
+    const description =
+      typeof raw.description === "string" && raw.description.trim()
+        ? raw.description.trim()
+        : transcript.trim();
+
+    return { type, amount, description, category, flag };
+  } catch {
+    return null;
+  }
 }
