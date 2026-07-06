@@ -19,7 +19,61 @@ messaging.onBackgroundMessage((payload) => {
   const title = payload.notification?.title ?? "SpendSense";
   const options = {
     body: payload.notification?.body ?? "",
-    icon: "/next.svg",
+    icon: "/icons/icon-192.png",
   };
   self.registration.showNotification(title, options);
+});
+
+// Open the app (or focus it if already open) when a notification is clicked.
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if ("focus" in client) return client.focus();
+      }
+      return self.clients.openWindow("/dashboard");
+    })
+  );
+});
+
+// --- PWA offline caching ---------------------------------------------------
+// Network-first with a same-origin cache fallback: once pages and assets have
+// been visited online they stay available offline.
+const CACHE_NAME = "spendsense-v1";
+
+self.addEventListener("install", () => {
+  self.skipWaiting();
+});
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    caches
+      .keys()
+      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k))))
+      .then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener("fetch", (event) => {
+  const request = event.request;
+  if (request.method !== "GET") return;
+
+  const url = new URL(request.url);
+  // Only handle same-origin requests; let cross-origin (Firebase, Google APIs,
+  // fonts) pass through untouched.
+  if (url.origin !== self.location.origin) return;
+
+  event.respondWith(
+    fetch(request)
+      .then((response) => {
+        const copy = response.clone();
+        caches
+          .open(CACHE_NAME)
+          .then((cache) => cache.put(request, copy))
+          .catch(() => {});
+        return response;
+      })
+      .catch(() => caches.match(request))
+  );
 });
