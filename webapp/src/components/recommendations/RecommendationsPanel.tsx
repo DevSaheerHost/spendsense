@@ -53,6 +53,7 @@ export function RecommendationsPanel({
         category: t.category,
         flag: t.flag,
         date: t.date,
+        time: t.time,
       })),
     [transactions]
   );
