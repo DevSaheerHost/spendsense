@@ -64,6 +64,18 @@ export interface AdviceTransaction {
   time?: string; // HH:mm
 }
 
+// A trimmed loan the AI can reason about for debt advice.
+export interface AdviceLoan {
+  name: string;
+  lender: string;
+  totalAmount: number;
+  amountPaid: number;
+  pending: number;
+  monthlyEmi: number;
+  dueDayOfMonth: number;
+  status: "active" | "closed";
+}
+
 export const EXPENSE_CATEGORIES = [
   "Housing",
   "Utilities",

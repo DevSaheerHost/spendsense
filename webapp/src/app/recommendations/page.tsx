@@ -31,6 +31,7 @@ function RecommendationsContent() {
         snapshot={snapshot}
         categoryBreakdown={categoryBreakdown}
         transactions={monthlyTransactions}
+        loans={loans}
       />
       <AiUsageNote />
     </div>

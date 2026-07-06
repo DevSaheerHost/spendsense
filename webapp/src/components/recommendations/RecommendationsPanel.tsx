@@ -14,12 +14,13 @@ import {
 } from "@/lib/firestore/recommendations";
 import { recordAiUsage } from "@/lib/firestore/aiUsage";
 import { generateFallbackRecommendations, type FinancialSnapshot } from "@/lib/recommendations/engine";
-import type { Transaction } from "@/lib/types";
+import type { Loan, Transaction } from "@/lib/types";
 
 interface RecommendationsPanelProps {
   snapshot: FinancialSnapshot;
   categoryBreakdown: Record<string, number>;
   transactions: Transaction[];
+  loans: Loan[];
 }
 
 function timeAgo(iso: string): string {
@@ -36,6 +37,7 @@ export function RecommendationsPanel({
   snapshot,
   categoryBreakdown,
   transactions,
+  loans,
 }: RecommendationsPanelProps) {
   const { user } = useAuth();
   const speech = useSpeech();
@@ -56,6 +58,21 @@ export function RecommendationsPanel({
         time: t.time,
       })),
     [transactions]
+  );
+
+  const adviceLoans = useMemo(
+    () =>
+      loans.map((l) => ({
+        name: l.name,
+        lender: l.lender,
+        totalAmount: l.totalAmount,
+        amountPaid: l.amountPaid,
+        pending: Math.max(l.totalAmount - l.amountPaid, 0),
+        monthlyEmi: l.monthlyEmi,
+        dueDayOfMonth: l.dueDayOfMonth,
+        status: l.status,
+      })),
+    [loans]
   );
 
   // Free, client-side advice shown until the user generates AI advice — no
@@ -93,7 +110,12 @@ export function RecommendationsPanel({
       const response = await fetch("/api/recommendations", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
-        body: JSON.stringify({ snapshot, categoryBreakdown, transactions: adviceTransactions }),
+        body: JSON.stringify({
+          snapshot,
+          categoryBreakdown,
+          transactions: adviceTransactions,
+          loans: adviceLoans,
+        }),
       });
       if (!response.ok) throw new Error("Request failed");
       const data = await response.json();
@@ -177,6 +199,7 @@ export function RecommendationsPanel({
         snapshot={snapshot}
         categoryBreakdown={categoryBreakdown}
         transactions={adviceTransactions}
+        loans={adviceLoans}
         speechSupported={speech.supported}
         speakingId={speech.speakingId}
         onToggleSpeak={speech.toggle}
