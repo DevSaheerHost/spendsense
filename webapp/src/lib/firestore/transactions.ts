@@ -34,6 +34,7 @@ export function subscribeToTransactions(
         category: data.category,
         flag: data.flag,
         date: data.date,
+        time: data.time,
         createdAt: createdAt ? createdAt.toDate().toISOString() : new Date().toISOString(),
       } as Transaction;
     });

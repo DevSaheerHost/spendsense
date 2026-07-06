@@ -111,13 +111,29 @@ async function callAI(system: string, turns: ChatTurn[], timeoutMs = 12_000): Pr
   return null;
 }
 
+const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+// Formats a transaction's date/time as e.g. "2026-07-05 (Sunday) 19:30" so the
+// model can reason about timing patterns (late-night spending, paydays, etc.).
+function formatWhen(date: string, time?: string): string {
+  const parsed = new Date(`${date}T00:00:00`);
+  const weekday = Number.isNaN(parsed.getTime()) ? "" : ` (${WEEKDAYS[parsed.getDay()]})`;
+  return `${date}${weekday}${time ? ` ${time}` : ""}`;
+}
+
 // Builds the shared financial-context block used to prime the model.
 function buildContextBlock(
   snapshot: FinancialSnapshot,
   categoryBreakdown: Record<string, number>,
   transactions: AdviceTransaction[]
 ): string {
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(
+    now.getDate()
+  ).padStart(2, "0")}`;
+
   const lines = [
+    `Today's date is ${today} (${WEEKDAYS[now.getDay()]}).`,
     "The user's financial summary for the current month (all amounts in Indian Rupees, INR):",
     `- Total income: ${snapshot.monthlyIncome} (fixed monthly income ${snapshot.baseMonthlyIncome} + extra one-off income ${snapshot.extraIncome})`,
     `- Monthly expenses: ${snapshot.monthlyExpense}`,
@@ -131,10 +147,13 @@ function buildContextBlock(
 
   const recent = transactions.slice(0, 40);
   if (recent.length > 0) {
-    lines.push("", "Individual transactions this month (description explains how money was earned/spent):");
+    lines.push(
+      "",
+      "Individual transactions this month (with the day/time the money moved, so you can spot timing patterns):"
+    );
     for (const t of recent) {
       lines.push(
-        `- [${t.type}] "${t.description}" | category: ${t.category} | flag: ${t.flag} | Rs ${t.amount} | ${t.date}`
+        `- [${t.type}] "${t.description}" | category: ${t.category} | flag: ${t.flag} | Rs ${t.amount} | ${formatWhen(t.date, t.time)}`
       );
     }
   }

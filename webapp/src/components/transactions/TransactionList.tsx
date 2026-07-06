@@ -23,6 +23,7 @@ export function TransactionList({ transactions, onDelete }: TransactionListProps
             <p className="truncate text-sm font-medium text-slate-900">{t.description}</p>
             <p className="text-xs text-slate-500">
               {t.category} &middot; {t.date}
+              {t.time ? ` ${t.time}` : ""}
             </p>
           </div>
           <span

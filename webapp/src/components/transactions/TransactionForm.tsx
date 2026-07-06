@@ -12,6 +12,10 @@ interface TransactionFormProps {
 }
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
+const nowTime = () => {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+};
 const AUTO_CATEGORIZE_DELAY = 1200; // ms of typing idle before auto-categorizing
 
 export function TransactionForm({ onSubmit }: TransactionFormProps) {
@@ -23,6 +27,7 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
   const [category, setCategory] = useState<string>(EXPENSE_CATEGORIES[0]);
   const [flag, setFlag] = useState<FlagType>("green");
   const [date, setDate] = useState(todayIso());
+  const [time, setTime] = useState(nowTime());
   const [submitting, setSubmitting] = useState(false);
   const [suggesting, setSuggesting] = useState(false);
   // Once the user picks a category by hand, stop auto-overriding it.
@@ -115,11 +120,13 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
         category,
         flag,
         date,
+        time,
       });
       setAmount("");
       setDescription("");
       setFlag("green");
       setDate(todayIso());
+      setTime(nowTime());
       setCategoryTouched(false);
       lastAutoKeyRef.current = "";
     } finally {
@@ -182,41 +189,51 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <div className="mb-1 flex items-center justify-between">
-            <label className="block text-sm font-medium text-slate-700">Category</label>
-            <button
-              type="button"
-              onClick={() => runCategorize(description, type, false)}
-              disabled={suggesting || categorizeCooldown.cooling || !description.trim()}
-              title="Auto-fills from your description; tap to re-run"
-              className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 disabled:text-slate-300"
-            >
-              {suggesting ? "✨ Categorizing…" : categorizeCooldown.cooling ? "✨ Wait…" : "✨ Auto"}
-            </button>
-          </div>
-          <select
-            value={category}
-            onChange={(e) => {
-              setCategory(e.target.value);
-              setCategoryTouched(true);
-            }}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+      <div>
+        <div className="mb-1 flex items-center justify-between">
+          <label className="block text-sm font-medium text-slate-700">Category</label>
+          <button
+            type="button"
+            onClick={() => runCategorize(description, type, false)}
+            disabled={suggesting || categorizeCooldown.cooling || !description.trim()}
+            title="Auto-fills from your description; tap to re-run"
+            className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 disabled:text-slate-300"
           >
-            {categories.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
+            {suggesting ? "✨ Categorizing…" : categorizeCooldown.cooling ? "✨ Wait…" : "✨ Auto"}
+          </button>
         </div>
+        <select
+          value={category}
+          onChange={(e) => {
+            setCategory(e.target.value);
+            setCategoryTouched(true);
+          }}
+          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+        >
+          {categories.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="mb-1 block text-sm font-medium text-slate-700">Date</label>
           <input
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium text-slate-700">Time</label>
+          <input
+            type="time"
+            value={time}
+            onChange={(e) => setTime(e.target.value)}
             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
           />
         </div>

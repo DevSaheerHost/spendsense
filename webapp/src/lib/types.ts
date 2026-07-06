@@ -10,6 +10,7 @@ export interface Transaction {
   category: string;
   flag: FlagType;
   date: string; // ISO date string (yyyy-MM-dd)
+  time?: string; // 24h time of day (HH:mm), when the money moved
   createdAt: string; // ISO datetime string
 }
 
@@ -60,6 +61,7 @@ export interface AdviceTransaction {
   category: string;
   flag: FlagType;
   date: string;
+  time?: string; // HH:mm
 }
 
 export const EXPENSE_CATEGORIES = [
