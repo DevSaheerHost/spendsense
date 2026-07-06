@@ -12,6 +12,7 @@ import { useLoans } from "@/hooks/useLoans";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useMonthlyStats } from "@/hooks/useMonthlyStats";
 import { setMonthlyBudget, setMonthlyIncome } from "@/lib/firestore/users";
+import { processDueRecurring } from "@/lib/firestore/recurring";
 import { registerForPushNotifications } from "@/lib/notifications/fcm";
 import { formatCurrency } from "@/lib/utils";
 
@@ -35,6 +36,14 @@ function DashboardContent() {
   );
   const [enabling, setEnabling] = useState(false);
   const tokenSyncedRef = useRef(false);
+  const recurringProcessedRef = useRef(false);
+
+  // Post any due recurring transactions once when the dashboard opens.
+  useEffect(() => {
+    if (!user || recurringProcessedRef.current) return;
+    recurringProcessedRef.current = true;
+    processDueRecurring(user.uid).catch(() => {});
+  }, [user]);
 
   useEffect(() => {
     // Sync the initial value from the browser's Notification API on mount.

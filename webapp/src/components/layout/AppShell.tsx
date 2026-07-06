@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/transactions", label: "Transactions" },
   { href: "/loans", label: "Loans" },
+  { href: "/recurring", label: "Recurring" },
   { href: "/recommendations", label: "Advice" },
 ];
 

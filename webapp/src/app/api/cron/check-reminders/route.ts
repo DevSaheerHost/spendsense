@@ -6,6 +6,7 @@ import { formatCurrency } from "@/lib/utils";
 // Checks every user for:
 //  1. Loan EMIs due within the next 3 days -> reminder notification
 //  2. Monthly expenses that exceed their configured budget -> overspend warning
+//  3. Recurring bills/expenses due within the next 3 days -> reminder
 // Protected by CRON_SECRET so it cannot be triggered by arbitrary requests.
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
@@ -50,7 +51,26 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // 2. Monthly budget overspend check.
+    // 2. Upcoming recurring bill reminders (active, expense, due within 3 days).
+    const recurringSnap = await db
+      .collection(`users/${uid}/recurring`)
+      .where("active", "==", true)
+      .get();
+    for (const recDoc of recurringSnap.docs) {
+      const rec = recDoc.data();
+      if (rec.type !== "expense" || typeof rec.nextRunDate !== "string") continue;
+      const due = new Date(`${rec.nextRunDate}T00:00:00`);
+      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const daysUntilDue = Math.round((due.getTime() - startOfToday.getTime()) / (1000 * 60 * 60 * 24));
+      if (daysUntilDue >= 0 && daysUntilDue <= 3) {
+        notifications.push({
+          title: "Upcoming bill",
+          body: `${rec.description}: ${formatCurrency(rec.amount)} due in ${daysUntilDue} day(s).`,
+        });
+      }
+    }
+
+    // 3. Monthly budget overspend check.
     const monthlyBudget: number | undefined = userData.monthlyBudget;
     if (monthlyBudget && monthlyBudget > 0) {
       const txSnap = await db

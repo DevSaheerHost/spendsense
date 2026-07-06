@@ -34,6 +34,30 @@ export type NewLoan = Omit<Loan, "id" | "createdAt" | "amountPaid" | "status"> &
   amountPaid?: number;
 };
 
+export type RecurringFrequency = "monthly" | "weekly";
+
+// A template that auto-generates a real transaction on a schedule (rent,
+// salary, subscriptions, EMIs) and drives bill reminders.
+export interface RecurringTransaction {
+  id: string;
+  type: TransactionType;
+  amount: number;
+  description: string;
+  category: string;
+  flag: FlagType;
+  frequency: RecurringFrequency;
+  dayOfMonth?: number; // 1-28 (monthly)
+  dayOfWeek?: number; // 0-6, 0=Sunday (weekly)
+  nextRunDate: string; // yyyy-MM-dd, next time it should post
+  active: boolean;
+  createdAt: string;
+}
+
+export type NewRecurring = Omit<
+  RecurringTransaction,
+  "id" | "createdAt" | "nextRunDate" | "active"
+>;
+
 export interface UserProfile {
   uid: string;
   email: string;
