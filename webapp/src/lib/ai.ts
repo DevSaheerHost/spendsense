@@ -1,6 +1,6 @@
 import "server-only";
 import type { FinancialSnapshot } from "@/lib/recommendations/engine";
-import type { AdviceTransaction, ChatMessage } from "@/lib/types";
+import type { AdviceLoan, AdviceTransaction, ChatMessage } from "@/lib/types";
 
 // Language the AI advice/chat is written in. Defaults to Malayalam; override
 // with AI_ADVICE_LANGUAGE (GEMINI_ADVICE_LANGUAGE is still honored for back-compat).
@@ -125,7 +125,8 @@ function formatWhen(date: string, time?: string): string {
 function buildContextBlock(
   snapshot: FinancialSnapshot,
   categoryBreakdown: Record<string, number>,
-  transactions: AdviceTransaction[]
+  transactions: AdviceTransaction[],
+  loans: AdviceLoan[]
 ): string {
   const now = new Date();
   const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(
@@ -144,6 +145,15 @@ function buildContextBlock(
     `- Monthly loan/EMI obligations: ${snapshot.monthlyEmiTotal}`,
     `- Spending by category: ${JSON.stringify(categoryBreakdown)}`,
   ];
+
+  if (loans.length > 0) {
+    lines.push("", "Loans / EMIs:");
+    for (const l of loans) {
+      lines.push(
+        `- "${l.name}"${l.lender ? ` from ${l.lender}` : ""} | total Rs ${l.totalAmount} | paid Rs ${l.amountPaid} | pending Rs ${l.pending} | EMI Rs ${l.monthlyEmi}/month due on day ${l.dueDayOfMonth} of the month | ${l.status}`
+      );
+    }
+  }
 
   const recent = transactions.slice(0, 40);
   if (recent.length > 0) {
@@ -167,9 +177,10 @@ function buildContextBlock(
 export async function generateAdvice(
   snapshot: FinancialSnapshot,
   categoryBreakdown: Record<string, number>,
-  transactions: AdviceTransaction[] = []
+  transactions: AdviceTransaction[] = [],
+  loans: AdviceLoan[] = []
 ): Promise<string[] | null> {
-  const context = buildContextBlock(snapshot, categoryBreakdown, transactions);
+  const context = buildContextBlock(snapshot, categoryBreakdown, transactions, loans);
   const prompt = `You are a personal finance advisor.
 ${context}
 
@@ -196,9 +207,10 @@ export async function generateChatReply(
   snapshot: FinancialSnapshot,
   categoryBreakdown: Record<string, number>,
   transactions: AdviceTransaction[],
+  loans: AdviceLoan[],
   history: ChatMessage[]
 ): Promise<string | null> {
-  const context = buildContextBlock(snapshot, categoryBreakdown, transactions);
+  const context = buildContextBlock(snapshot, categoryBreakdown, transactions, loans);
   const system = `You are a friendly, concise personal finance advisor for an
 Indian user. Base your answers on the user's data below and the conversation.
 ${context}

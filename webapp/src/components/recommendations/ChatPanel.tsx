@@ -7,12 +7,13 @@ import { SpeakButton } from "@/components/recommendations/SpeakButton";
 import { recordAiUsage } from "@/lib/firestore/aiUsage";
 import { clearChatHistory, loadChatHistory, saveChatHistory } from "@/lib/firestore/chat";
 import type { FinancialSnapshot } from "@/lib/recommendations/engine";
-import type { AdviceTransaction, ChatMessage } from "@/lib/types";
+import type { AdviceLoan, AdviceTransaction, ChatMessage } from "@/lib/types";
 
 interface ChatPanelProps {
   snapshot: FinancialSnapshot;
   categoryBreakdown: Record<string, number>;
   transactions: AdviceTransaction[];
+  loans: AdviceLoan[];
   speechSupported: boolean;
   speakingId: string | null;
   onToggleSpeak: (id: string, text: string) => void;
@@ -22,6 +23,7 @@ export function ChatPanel({
   snapshot,
   categoryBreakdown,
   transactions,
+  loans,
   speechSupported,
   speakingId,
   onToggleSpeak,
@@ -65,7 +67,7 @@ export function ChatPanel({
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
-        body: JSON.stringify({ snapshot, categoryBreakdown, transactions, messages: nextMessages }),
+        body: JSON.stringify({ snapshot, categoryBreakdown, transactions, loans, messages: nextMessages }),
       });
       if (!response.ok) throw new Error("Request failed");
       const data = await response.json();
