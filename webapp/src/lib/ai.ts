@@ -260,6 +260,31 @@ else. No punctuation, no explanation.`;
 }
 
 /**
+ * Writes a short, friendly weekly money summary (1-2 sentences) in the
+ * configured language, or null if no AI provider is available so the caller
+ * can fall back to a templated message.
+ */
+export async function generateWeeklyDigest(
+  snapshot: FinancialSnapshot,
+  weekExpense: number,
+  topCategory: string | null
+): Promise<string | null> {
+  const prompt = `Write a short, friendly weekly personal-finance summary for
+the user, in ${ADVICE_LANGUAGE}. Maximum 2 short sentences, plain text (no
+markdown). Use the "Rs" prefix for money and standard digits.
+
+Data (Indian Rupees):
+- Spent in the last 7 days: ${weekExpense}
+- This month income: ${snapshot.monthlyIncome}, expenses: ${snapshot.monthlyExpense}, net savings: ${snapshot.savings}
+- Top spending category this month: ${topCategory ?? "none"}
+
+Summarize how the week went and add one short encouraging or actionable tip.`;
+
+  const text = await callAI("", [{ role: "user", content: prompt }], 12_000);
+  return text?.trim() ? text.trim() : null;
+}
+
+/**
  * Parses a spoken/typed sentence (Malayalam, English, or a mix) into a draft
  * transaction. Returns a validated ParsedTransaction, or null if the AI is
  * unavailable or the text can't be understood as a transaction.
