@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCooldown } from "@/hooks/useCooldown";
 import { VoiceEntry } from "@/components/transactions/VoiceEntry";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { recordAiUsage } from "@/lib/firestore/aiUsage";
 import {
   EXPENSE_CATEGORIES,
@@ -158,20 +159,15 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
     <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border border-slate-200 bg-white p-4">
       <VoiceEntry onParsed={applyParsed} />
 
-      <div className="flex gap-2">
-        {(["expense", "income"] as TransactionType[]).map((t) => (
-          <button
-            key={t}
-            type="button"
-            onClick={() => handleTypeChange(t)}
-            className={`flex-1 rounded-lg py-2 text-sm font-semibold capitalize ${
-              type === t ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600"
-            }`}
-          >
-            {t}
-          </button>
-        ))}
-      </div>
+      <SegmentedControl
+        ariaLabel="Transaction type"
+        value={type}
+        onChange={handleTypeChange}
+        options={[
+          { value: "expense", label: "Expense" },
+          { value: "income", label: "Income" },
+        ]}
+      />
 
       <div>
         <label className="mb-1 block text-sm font-medium text-slate-700">Amount</label>

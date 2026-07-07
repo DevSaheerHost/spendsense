@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import {
   EXPENSE_CATEGORIES,
   INCOME_CATEGORIES,
@@ -64,20 +65,15 @@ export function RecurringForm({ onSubmit }: RecurringFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border border-slate-200 bg-white p-4">
-      <div className="flex gap-2">
-        {(["expense", "income"] as TransactionType[]).map((t) => (
-          <button
-            key={t}
-            type="button"
-            onClick={() => handleTypeChange(t)}
-            className={`flex-1 rounded-lg py-2 text-sm font-semibold capitalize ${
-              type === t ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600"
-            }`}
-          >
-            {t}
-          </button>
-        ))}
-      </div>
+      <SegmentedControl
+        ariaLabel="Transaction type"
+        value={type}
+        onChange={handleTypeChange}
+        options={[
+          { value: "expense", label: "Expense" },
+          { value: "income", label: "Income" },
+        ]}
+      />
 
       <div>
         <label className="mb-1 block text-sm font-medium text-slate-700">Amount</label>
@@ -127,20 +123,15 @@ export function RecurringForm({ onSubmit }: RecurringFormProps) {
 
       <div>
         <label className="mb-1 block text-sm font-medium text-slate-700">Repeats</label>
-        <div className="flex gap-2">
-          {(["monthly", "weekly"] as RecurringFrequency[]).map((f) => (
-            <button
-              key={f}
-              type="button"
-              onClick={() => setFrequency(f)}
-              className={`flex-1 rounded-lg py-2 text-sm font-semibold capitalize ${
-                frequency === f ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600"
-              }`}
-            >
-              {f}
-            </button>
-          ))}
-        </div>
+        <SegmentedControl
+          ariaLabel="Repeat frequency"
+          value={frequency}
+          onChange={setFrequency}
+          options={[
+            { value: "monthly", label: "Monthly" },
+            { value: "weekly", label: "Weekly" },
+          ]}
+        />
       </div>
 
       {frequency === "monthly" ? (

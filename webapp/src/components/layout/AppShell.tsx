@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
 import toast from "react-hot-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { Fab } from "@/components/layout/Fab";
 import { getMessagingInstance } from "@/lib/firebase/client";
 import { listenForForegroundMessages } from "@/lib/notifications/fcm";
 
@@ -86,6 +87,9 @@ export function AppShell({ children }: { children: ReactNode }) {
       </header>
 
       <main className="mx-auto w-full max-w-2xl flex-1 px-4 pb-6 pt-4">{children}</main>
+
+      {/* Quick-add FAB everywhere except the Transactions page (form is there). */}
+      {!pathname?.startsWith("/transactions") && <Fab />}
 
       <nav
         className="sticky bottom-0 z-20 border-t border-slate-100 bg-white"

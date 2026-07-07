@@ -79,6 +79,16 @@ button:not(:disabled):active {
   transform: scale(0.97);
 }
 
+/* Bottom-sheet enter animation (Material-style slide up). */
+@keyframes sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
 /* Recessive, native-feeling scrollbars. */
 * {
   scrollbar-width: thin;
