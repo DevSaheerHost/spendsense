@@ -7,6 +7,7 @@ import { SummaryCards } from "@/components/dashboard/SummaryCards";
 import { ExpensePieChart } from "@/components/dashboard/ExpensePieChart";
 import { TrendChart } from "@/components/dashboard/TrendChart";
 import { SpendingHeatmap } from "@/components/dashboard/SpendingHeatmap";
+import { HealthScore } from "@/components/dashboard/HealthScore";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useLoans } from "@/hooks/useLoans";
@@ -103,6 +104,8 @@ function DashboardContent() {
         expense={snapshot.monthlyExpense}
         balance={snapshot.savings}
       />
+
+      <HealthScore snapshot={snapshot} monthlyBudget={profile?.monthlyBudget} />
 
       {overBudget && (
         <div className="rounded-xl border-2 border-red-500 bg-red-50 p-3 text-sm text-red-700">

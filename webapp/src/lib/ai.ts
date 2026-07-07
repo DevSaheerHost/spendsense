@@ -260,6 +260,29 @@ else. No punctuation, no explanation.`;
 }
 
 /**
+ * Explains a financial health score in 2-3 short sentences (what it means +
+ * the top thing to improve), in the configured language. Null on failure.
+ */
+export async function generateHealthExplanation(
+  snapshot: FinancialSnapshot,
+  score: number,
+  factorSummary: string
+): Promise<string | null> {
+  const prompt = `The user's financial health score is ${score} out of 100.
+Factor scores (0-100): ${factorSummary}.
+Financial data (Indian Rupees): income ${snapshot.monthlyIncome}, expenses
+${snapshot.monthlyExpense}, net savings ${snapshot.savings}, monthly EMIs
+${snapshot.monthlyEmiTotal}, red-flag (unhealthy) spending ${snapshot.redFlagTotal}.
+
+In ${ADVICE_LANGUAGE}, write 2-3 short sentences: explain what this score
+means and the top one or two things to improve it. Plain text, no markdown.
+Use the Rs prefix for money and standard digits.`;
+
+  const text = await callAI("", [{ role: "user", content: prompt }], 12_000);
+  return text?.trim() ? text.trim() : null;
+}
+
+/**
  * Writes a short, friendly weekly money summary (1-2 sentences) in the
  * configured language, or null if no AI provider is available so the caller
  * can fall back to a templated message.
